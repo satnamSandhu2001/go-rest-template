@@ -27,17 +27,32 @@ func (h *AuthHandler) Signup(c *gin.Context) {
 		API.ValidationsErrors(c, errors)
 		return
 	}
-
-	if exists, _ := h.service.GetUserByEmail(c.Request.Context(), u.Email); exists != nil {
-		API.Error(c, "user already exists")
+	userExists, err := h.service.GetUserByEmail(c.Request.Context(), u.Email)
+	if err != nil {
+		API.InternalServerError(c, "Failed to signup", err)
+		return
+	}
+	if userExists != nil {
+		API.Error(c, "User with this email already exists")
 		return
 	}
 	if err := h.service.CreateUser(c.Request.Context(), &u); err != nil {
-		API.InternalServerError(c, "failed to create user")
+		API.InternalServerError(c, "Failed to signup", err)
 		return
 	}
-	u.Password = ""
-	API.Success(c, "user created successfully", u)
+
+	newUser, err := h.service.GetUserByID(c.Request.Context(), u.ID)
+	if (err != nil) || (newUser == nil) {
+		API.InternalServerError(c, "Failed to signup", err)
+		return
+	}
+
+	token, err := pkg.GenerateToken(u.Email)
+	if err != nil {
+		API.InternalServerError(c, "Failed to generate token", err)
+
+	}
+	API.SendJWTtoken(c, token, "Account Created Successfully", map[string]any{"token": token, "user": newUser})
 }
 
 // POST /auth/login
@@ -50,16 +65,20 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	exists, err := h.service.Authenticate(c.Request.Context(), u.Email, u.Password)
+	user, err := h.service.Authenticate(c.Request.Context(), u.Email, u.Password)
 	if err != nil {
-		API.Error(c, err.Error())
+		API.InternalServerError(c, "invalid credentials", err)
+		return
+	}
+	if user == nil {
+		API.Error(c, "invalid credentials")
 		return
 	}
 
 	token, err := pkg.GenerateToken(u.Email)
 	if err != nil {
-		API.InternalServerError(c, "failed to generate token")
-
+		API.InternalServerError(c, "failed to generate token", err)
 	}
-	API.SendJWTtoken(c, token, "logged in successfully", map[string]any{"token": token, "user": exists})
+
+	API.SendJWTtoken(c, token, "logged in successfully", map[string]any{"token": token, "user": user})
 }

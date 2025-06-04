@@ -29,11 +29,12 @@ func AuthMiddleware(userService *services.UserService) gin.HandlerFunc {
 			return
 		}
 
-		user, error := userService.GetUserByEmail(ctx.Request.Context(), email)
-		if error != nil {
+		user, err := userService.GetUserByEmail(ctx.Request.Context(), email)
+		if (user == nil) || (err != nil) {
 			API.Unauthorized(ctx, "unauthorized")
 			return
 		}
+
 		ctx.Set("user", user)
 		ctx.Next()
 	}

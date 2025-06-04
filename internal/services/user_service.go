@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"go-rest-template/internal/dto"
 	"go-rest-template/internal/models"
@@ -21,15 +22,16 @@ func NewUserService(db *sqlx.DB) *UserService {
 }
 
 func (s *UserService) CreateUser(ctx context.Context, u *dto.User_RegisterRequest) error {
-
 	hash, err := pkg.GenerateHash(u.Password)
 	if err != nil {
 		return err
 	}
 	u.Password = hash
-
-	query := `INSERT INTO users (email, password) VALUES (?, ?)`
-	res, err := s.db.ExecContext(ctx, query, u.Email, u.Password)
+	if u.Role == "" {
+		u.Role = "superadmin"
+	}
+	query := `INSERT INTO users (email, password, role) VALUES (?, ?, ?)`
+	res, err := s.db.ExecContext(ctx, query, u.Email, u.Password, u.Role)
 	if err != nil {
 		return err
 	}
@@ -39,6 +41,7 @@ func (s *UserService) CreateUser(ctx context.Context, u *dto.User_RegisterReques
 		return err
 	}
 	u.ID = id
+	u.Password = ""
 	return nil
 }
 
@@ -46,6 +49,20 @@ func (s *UserService) GetUserByEmail(ctx context.Context, email string) (*models
 	var u models.User
 	err := s.db.GetContext(ctx, &u, "SELECT * FROM users WHERE email = ?", email)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &u, nil
+}
+func (s *UserService) GetUserByID(ctx context.Context, id int64) (*models.User, error) {
+	var u models.User
+	err := s.db.GetContext(ctx, &u, "SELECT * FROM users WHERE id = ?", id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return &u, nil
@@ -64,6 +81,9 @@ func (s *UserService) Authenticate(ctx context.Context, email string, password s
 	var u models.User
 	err := s.db.GetContext(ctx, &u, "SELECT * FROM users WHERE email = ?", email)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
 		return nil, errors.New("user not found")
 	}
 

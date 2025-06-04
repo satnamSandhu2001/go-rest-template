@@ -3,7 +3,7 @@ package handlers
 import (
 	"go-rest-template/internal/models"
 	"go-rest-template/internal/services"
-	"net/http"
+	"go-rest-template/pkg/API"
 
 	"github.com/gin-gonic/gin"
 )
@@ -22,25 +22,25 @@ func NewUserHandler(service *services.UserService) *UserHandler {
 func (h *UserHandler) ListUsers(c *gin.Context) {
 	users, err := h.service.ListUsers(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get users"})
+		API.Error(c, "failed to list users")
 		return
 	}
-	c.JSON(http.StatusOK, users)
+	API.Success(c, "success", users)
 }
 
 // GET /users/me
 func (h *UserHandler) GetMyDetails(c *gin.Context) {
 	user, exists := c.Get("user")
 	if !exists {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get user"})
+		API.Unauthorized(c, "unauthorized")
 		return
 	}
 	currentUser := user.(*models.User)
 
 	u, err := h.service.GetUserByEmail(c.Request.Context(), currentUser.Email)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		API.Error(c, "failed to get user details")
 		return
 	}
-	c.JSON(http.StatusOK, u)
+	API.Success(c, "success", u)
 }

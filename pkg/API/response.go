@@ -1,6 +1,7 @@
 package API
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -51,8 +52,9 @@ func NotFound(c *gin.Context, message string) {
 	AbortWithStatusError(c, http.StatusNotFound, message)
 }
 
-// InternalServerError sends a 500 Internal Server Error response and aborts
-func InternalServerError(c *gin.Context, message string) {
+// InternalServerError logs error and sends a 500 Internal Server Error response and aborts
+func InternalServerError(c *gin.Context, message string, logs error) {
+	log.Println("Internal Server Error :", logs)
 	AbortWithStatusError(c, http.StatusInternalServerError, message)
 }
 
