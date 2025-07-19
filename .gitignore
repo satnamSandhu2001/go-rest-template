@@ -1,0 +1,25 @@
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+
+# Output directories
+/bin
+/tmp
+/dist
+# Go workspace file
+go.work
+
+# Go build cache
+.cache/
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+.env
+*.db

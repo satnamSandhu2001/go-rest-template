@@ -1,0 +1,16 @@
+version: '2'
+sql:
+  - engine: 'postgresql'
+    queries: 'schema/queries/'
+    schema: 'schema/migrations/'
+    gen:
+      go:
+        package: 'db'
+        out: 'internal/db'
+        sql_package: 'pgx/v5'
+        emit_json_tags: true
+        emit_pointers_for_null_types: true # Use *string instead of sql.NullString
+        emit_empty_slices: true # Return []Type{} instead of nil for empty results
+        overrides:
+          - column: 'users.password_hash' # override the password_hash column json tag
+            go_struct_tag: 'json:"-"'
